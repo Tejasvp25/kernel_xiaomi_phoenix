@@ -44,8 +44,6 @@
 #define HUB_QUIRK_CHECK_PORT_AUTOSUSPEND	0x01
 #define HUB_QUIRK_DISABLE_AUTOSUSPEND		0x02
 
-int deny_new_usb __read_mostly = 0;
-
 /* Protect struct usb_device->state and ->children members
  * Note: Both are also protected by ->dev.sem, except that ->state can
  * change to USB_STATE_NOTATTACHED even when the semaphore isn't held. */
@@ -1092,7 +1090,10 @@ static void hub_activate(struct usb_hub *hub, enum hub_activation_type type)
 		} else {
 			hub_power_on(hub, true);
 		}
-	}
+	/* Give some time on remote wakeup to let links to transit to U0 */
+	} else if (hub_is_superspeed(hub->hdev))
+		msleep(20);
+
  init2:
 
 	/*
@@ -1207,7 +1208,7 @@ static void hub_activate(struct usb_hub *hub, enum hub_activation_type type)
 			 */
 			if (portchange || (hub_is_superspeed(hub->hdev) &&
 						port_resumed))
-				set_bit(port1, hub->change_bits);
+				set_bit(port1, hub->event_bits);
 
 		} else if (udev->persist_enabled) {
 #ifdef CONFIG_PM
@@ -4940,11 +4941,6 @@ static void hub_port_connect(struct usb_hub *hub, int port1, u16 portstatus,
 		if (portstatus & USB_PORT_STAT_ENABLE)
 			goto done;
 		return;
-	}
-
-	if (deny_new_usb) {
-		dev_err(&port_dev->dev, "denied insert of USB device on port %d\n", port1);
-		goto done;
 	}
 
 	if (hub_is_superspeed(hub->hdev))

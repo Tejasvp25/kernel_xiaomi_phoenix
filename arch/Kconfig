@@ -1147,5 +1147,7 @@ config LLVM_POLLY
 	  maximum cache locality. This requires an LLVM toolchain explicitly
 	  compiled with Polly support.
 
+config ARCH_USE_MEMREMAP_PROT
+	bool
 
 source "kernel/gcov/Kconfig"
